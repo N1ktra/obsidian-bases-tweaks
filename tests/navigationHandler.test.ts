@@ -46,9 +46,14 @@ describe('navigationHandler', () => {
                 },
             } as any;
 
-            const handler = new NavigationHandler(mockApp, () => ({
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
                 baseOpenMode: 'split',
                 defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {},
             }));
 
             const resultLeaf = handler.getOrCreateSplitLeaf();
@@ -76,9 +81,14 @@ describe('navigationHandler', () => {
                 },
             } as any;
 
-            const handler = new NavigationHandler(mockApp, () => ({
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
                 baseOpenMode: 'split',
                 defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {},
             }));
 
             // First call finds existing leaf
@@ -92,6 +102,28 @@ describe('navigationHandler', () => {
             const result2 = handler.getOrCreateSplitLeaf();
             expect(result2).toBe(existingSplitLeaf);
             expect(mockApp.workspace.getLeaf).not.toHaveBeenCalled();
+        });
+
+        it('respects per-page open mode override if defined', () => {
+            const hostNote = { path: 'Uni/SwSec.md' } as any;
+            const mockBaseResolver = {
+                resolveHostFile: () => hostNote,
+            } as any;
+
+            const mockApp = {
+                workspace: { rootSplit: {} },
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
+                baseOpenMode: 'split',
+                defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {
+                    'Uni/SwSec.md': 'tab',
+                },
+            }));
+
+            const mode = handler.getEffectiveModeForContext({} as any);
+            expect(mode).toBe('tab');
         });
     });
 });

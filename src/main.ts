@@ -6,6 +6,7 @@ import { NavigationHandler } from './services/navigationHandler';
 import { DEFAULT_SETTINGS, KanbanBasesPlusSettingTab } from './settings';
 import { KanbanBasesPlusSettings } from './types';
 import { HeaderButtonManager } from './ui/headerButtonManager';
+import { OpenModeButtonManager } from './ui/openModeButtonManager';
 
 export default class KanbanBasesPlusPlugin extends Plugin {
     settings: KanbanBasesPlusSettings = DEFAULT_SETTINGS;
@@ -14,6 +15,7 @@ export default class KanbanBasesPlusPlugin extends Plugin {
     navigationHandler!: NavigationHandler;
     cardCreator!: CardCreator;
     headerButtonManager!: HeaderButtonManager;
+    openModeButtonManager!: OpenModeButtonManager;
 
     private mutationObserver: MutationObserver | null = null;
     private debouncedUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -24,7 +26,11 @@ export default class KanbanBasesPlusPlugin extends Plugin {
         // 1. Initialize services
         this.baseResolver = new BaseResolver(this.app);
         this.baseViewService = new BaseViewService(this.app);
-        this.navigationHandler = new NavigationHandler(this.app, () => this.settings);
+        this.navigationHandler = new NavigationHandler(
+            this.app,
+            this.baseResolver,
+            () => this.settings
+        );
         this.navigationHandler.init();
         this.cardCreator = new CardCreator(
             this.app,
@@ -37,6 +43,12 @@ export default class KanbanBasesPlusPlugin extends Plugin {
             this.baseViewService,
             this.cardCreator,
             () => this.settings
+        );
+        this.openModeButtonManager = new OpenModeButtonManager(
+            this.app,
+            this.baseResolver,
+            () => this.settings,
+            () => this.saveSettings()
         );
 
         // 2. Settings tab
@@ -78,12 +90,22 @@ export default class KanbanBasesPlusPlugin extends Plugin {
             true
         );
 
-        // 4. Workspace events for header buttons
+        // 4. Workspace & Vault events
         this.registerEvent(
             this.app.workspace.on('layout-change', () => this.scheduleButtonUpdate())
         );
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => this.scheduleButtonUpdate())
+        );
+        this.registerEvent(
+            this.app.vault.on('rename', (file, oldPath) => {
+                this.handleFileRename(file.path, oldPath);
+            })
+        );
+        this.registerEvent(
+            this.app.vault.on('delete', (file) => {
+                this.handleFileDelete(file.path);
+            })
         );
 
         // 5. MutationObserver to catch base view rendering and tab switches
@@ -128,6 +150,7 @@ export default class KanbanBasesPlusPlugin extends Plugin {
         }
         this.debouncedUpdateTimeout = setTimeout(() => {
             this.headerButtonManager.updateAllButtons();
+            this.openModeButtonManager.updateAllButtons();
             this.debouncedUpdateTimeout = null;
         }, delayMs);
     }
@@ -143,6 +166,49 @@ export default class KanbanBasesPlusPlugin extends Plugin {
         }
         this.navigationHandler.teardown();
         this.headerButtonManager.cleanup();
+        this.openModeButtonManager.cleanup();
+    }
+
+    async handleFileRename(newPath: string, oldPath: string): Promise<void> {
+        let hasChanges = false;
+        const modes = this.settings.perPageOpenModes;
+        if (!modes) return;
+
+        for (const key of Object.keys(modes)) {
+            if (key === oldPath) {
+                modes[newPath] = modes[key];
+                delete modes[key];
+                hasChanges = true;
+            } else if (key.startsWith(oldPath + '/')) {
+                const subPath = key.slice(oldPath.length);
+                const updatedKey = newPath + subPath;
+                modes[updatedKey] = modes[key];
+                delete modes[key];
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges) {
+            await this.saveSettings();
+            this.openModeButtonManager.updateAllButtons();
+        }
+    }
+
+    async handleFileDelete(deletedPath: string): Promise<void> {
+        let hasChanges = false;
+        const modes = this.settings.perPageOpenModes;
+        if (!modes) return;
+
+        for (const key of Object.keys(modes)) {
+            if (key === deletedPath || key.startsWith(deletedPath + '/')) {
+                delete modes[key];
+                hasChanges = true;
+            }
+        }
+
+        if (hasChanges) {
+            await this.saveSettings();
+        }
     }
 
     async loadSettings(): Promise<void> {

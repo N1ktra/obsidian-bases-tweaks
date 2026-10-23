@@ -5,6 +5,7 @@ import { BaseOpenMode, KanbanBasesPlusSettings } from './types';
 export const DEFAULT_SETTINGS: KanbanBasesPlusSettings = {
     baseOpenMode: 'split',
     defaultNoteTitlePrefix: 'Neuer Eintrag',
+    perPageOpenModes: {},
 };
 
 export class KanbanBasesPlusSettingTab extends PluginSettingTab {

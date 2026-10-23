@@ -1,5 +1,6 @@
 import { App, Platform, TFile, WorkspaceLeaf } from 'obsidian';
 import { BaseOpenMode, KanbanBasesPlusSettings } from '../types';
+import { BaseResolver } from './baseResolver';
 
 /**
  * Resolves the effective open mode based on the user's setting and device type.
@@ -26,8 +27,31 @@ export class NavigationHandler {
 
     constructor(
         private app: App,
+        private baseResolver: BaseResolver,
         private getSettings: () => KanbanBasesPlusSettings
     ) {}
+
+    /**
+     * Resolves the effective open mode, taking into account:
+     * 1. Phone platform (always 'current')
+     * 2. Per-page override stored in settings.perPageOpenModes
+     * 3. Global configured setting (settings.baseOpenMode)
+     */
+    getEffectiveModeForContext(contextEl?: HTMLElement | null): BaseOpenMode {
+        if (Platform.isPhone) {
+            return 'current';
+        }
+
+        const targetEl = contextEl || this.lastInteractionTarget;
+        const hostFile = this.baseResolver.resolveHostFile(targetEl);
+        const perPageModes = this.getSettings().perPageOpenModes || {};
+
+        if (hostFile && perPageModes[hostFile.path]) {
+            return perPageModes[hostFile.path];
+        }
+
+        return this.getSettings().baseOpenMode;
+    }
 
     /**
      * Initializes monkey patching on workspace link navigation to enforce
@@ -48,10 +72,7 @@ export class NavigationHandler {
             openViewState?: any
         ) {
             if (self.isInteractingWithBase) {
-                const effectiveMode = resolveEffectiveOpenMode(
-                    self.getSettings().baseOpenMode,
-                    Platform.isPhone
-                );
+                const effectiveMode = self.getEffectiveModeForContext(self.lastInteractionTarget);
                 if (effectiveMode === 'split') {
                     newLeaf = 'split';
                 } else if (effectiveMode === 'tab') {
@@ -72,10 +93,7 @@ export class NavigationHandler {
         // Patch getLeaf
         workspace.getLeaf = function (newLeaf?: any) {
             if (self.isInteractingWithBase && newLeaf !== 'window') {
-                const effectiveMode = resolveEffectiveOpenMode(
-                    self.getSettings().baseOpenMode,
-                    Platform.isPhone
-                );
+                const effectiveMode = self.getEffectiveModeForContext(self.lastInteractionTarget);
                 if (effectiveMode === 'split') {
                     return self.getOrCreateSplitLeaf();
                 } else if (effectiveMode === 'tab') {
@@ -212,12 +230,9 @@ export class NavigationHandler {
     async openFileWithMode(
         file: TFile,
         mode?: BaseOpenMode,
-        _contextEl?: HTMLElement | null
+        contextEl?: HTMLElement | null
     ): Promise<WorkspaceLeaf> {
-        const effectiveMode = mode || resolveEffectiveOpenMode(
-            this.getSettings().baseOpenMode,
-            Platform.isPhone
-        );
+        const effectiveMode = mode || this.getEffectiveModeForContext(contextEl || this.lastInteractionTarget);
 
         let leaf: WorkspaceLeaf;
         if (effectiveMode === 'split') {

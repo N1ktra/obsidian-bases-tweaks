@@ -5,6 +5,7 @@ export type BaseOpenMode = 'current' | 'tab' | 'split';
 export interface KanbanBasesPlusSettings {
     baseOpenMode: BaseOpenMode;
     defaultNoteTitlePrefix: string;
+    perPageOpenModes: Record<string, BaseOpenMode>;
 }
 
 export interface FilterPropertyMap {
