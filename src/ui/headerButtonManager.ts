@@ -66,13 +66,36 @@ export class HeaderButtonManager {
 
         const groupProperty = grouping.groupProperty;
 
-        // If button already exists in this toolbar, update label/tooltip and return
+        // Position: directly to the left of "Sortieren" (ganz links im rechten Aktionsbereich)
+        const sortMenu = toolbarEl.querySelector('.bases-toolbar-sort-menu');
+        const groupMenu = toolbarEl.querySelector('.bases-toolbar-group-menu');
+        const filterMenu = toolbarEl.querySelector('.bases-toolbar-filter-menu');
+        const newItemMenu = toolbarEl.querySelector('.bases-toolbar-new-item-menu');
+
+        const insertItem = (el: HTMLElement) => {
+            if (sortMenu) {
+                toolbarEl.insertBefore(el, sortMenu);
+            } else if (groupMenu) {
+                toolbarEl.insertBefore(el, groupMenu);
+            } else if (filterMenu) {
+                toolbarEl.insertBefore(el, filterMenu);
+            } else if (newItemMenu) {
+                toolbarEl.insertBefore(el, newItemMenu);
+            } else {
+                toolbarEl.appendChild(el);
+            }
+        };
+
+        // If button already exists in this toolbar, update label/tooltip and ensure correct position
         if (existingItem) {
             const btn = existingItem.querySelector('.text-icon-button');
             btn?.setAttribute(
                 'aria-label',
                 `Neue Spalte hinzufügen (${groupProperty})`
             );
+            if (sortMenu && sortMenu.previousElementSibling !== existingItem) {
+                insertItem(existingItem);
+            }
             return;
         }
 
@@ -143,21 +166,8 @@ export class HeaderButtonManager {
             }
         });
 
-        // Insert directly into .bases-toolbar:
-        // Preferred spot: right after .bases-toolbar-group-menu
-        const groupMenu = toolbarEl.querySelector('.bases-toolbar-group-menu');
-        const filterMenu = toolbarEl.querySelector('.bases-toolbar-filter-menu');
-        const newItemMenu = toolbarEl.querySelector('.bases-toolbar-new-item-menu');
-
-        if (groupMenu) {
-            groupMenu.insertAdjacentElement('afterend', itemEl);
-        } else if (filterMenu) {
-            filterMenu.insertAdjacentElement('afterend', itemEl);
-        } else if (newItemMenu) {
-            toolbarEl.insertBefore(itemEl, newItemMenu);
-        } else {
-            toolbarEl.appendChild(itemEl);
-        }
+        // Insert item into .bases-toolbar
+        insertItem(itemEl);
     }
 
     /**
