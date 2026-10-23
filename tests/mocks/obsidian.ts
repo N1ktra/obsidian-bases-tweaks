@@ -24,6 +24,7 @@ export class Notice {
 }
 
 export class WorkspaceLeaf {
+    parent: any = null;
     view: any = {
         getViewType: () => 'markdown',
         containerEl: {

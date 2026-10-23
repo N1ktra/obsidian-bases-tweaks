@@ -24,11 +24,13 @@ export class NavigationHandler {
     private lastTargetSplitLeaf: WorkspaceLeaf | null = null;
     private originalOpenLinkText: typeof App.prototype.workspace.openLinkText | null = null;
     private originalGetLeaf: typeof App.prototype.workspace.getLeaf | null = null;
+    private resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(
         private app: App,
         private baseResolver: BaseResolver,
-        private getSettings: () => BasesTweaksSettings
+        private getSettings: () => BasesTweaksSettings,
+        private saveSettings?: () => Promise<void>
     ) {}
 
     /**
@@ -80,23 +82,29 @@ export class NavigationHandler {
             newLeaf?: boolean | 'tab' | 'split' | 'window',
             openViewState?: any
         ) {
+            let isSplit = false;
             if (self.isInteractingWithBase) {
                 const effectiveMode = self.getEffectiveModeForContext(self.lastInteractionTarget);
                 if (effectiveMode === 'split') {
                     newLeaf = 'split';
+                    isSplit = true;
                 } else if (effectiveMode === 'tab') {
                     newLeaf = 'tab';
                 } else {
                     newLeaf = false;
                 }
             }
-            return self.originalOpenLinkText!.call(
+            const res = self.originalOpenLinkText!.call(
                 this,
                 linktext,
                 sourcePath,
                 newLeaf,
                 openViewState
             );
+            if (isSplit) {
+                self.restoreSplitSizeForContext(self.lastInteractionTarget);
+            }
+            return res;
         };
 
         // Patch getLeaf
@@ -217,11 +225,184 @@ export class NavigationHandler {
     }
 
     /**
+     * Finds the base leaf matching the context element or active base in workspace.
+     */
+    findBaseLeafForContext(contextEl?: HTMLElement | null): WorkspaceLeaf | null {
+        const target = contextEl || this.lastInteractionTarget;
+        if (target) {
+            let matched: WorkspaceLeaf | null = null;
+            this.app.workspace.iterateAllLeaves((leaf) => {
+                if (!matched && leaf.view?.containerEl?.contains(target)) {
+                    matched = leaf;
+                }
+            });
+            if (matched) return matched;
+        }
+
+        let fallback: WorkspaceLeaf | null = null;
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (!fallback && this.isMainWorkspaceLeaf(leaf) && this.isBaseLeaf(leaf)) {
+                fallback = leaf;
+            }
+        });
+        return fallback;
+    }
+
+    /**
+     * Resolves the saved split size (dimension percentage) for the current base.
+     */
+    getSavedSplitSize(contextEl?: HTMLElement | null, baseLeaf?: WorkspaceLeaf | null): number | null {
+        const el = contextEl || this.lastInteractionTarget || baseLeaf?.view?.containerEl;
+        const hostFile = this.baseResolver?.resolveHostFile ? this.baseResolver.resolveHostFile(el) : null;
+        const baseFile = this.baseResolver?.resolveBaseFileSync ? this.baseResolver.resolveBaseFileSync(el) : null;
+
+        const perBaseSizes = this.getSettings().perBaseSplitSizes || {};
+
+        if (hostFile && typeof perBaseSizes[hostFile.path] === 'number') {
+            return perBaseSizes[hostFile.path];
+        }
+        if (baseFile && typeof perBaseSizes[baseFile.path] === 'number') {
+            return perBaseSizes[baseFile.path];
+        }
+
+        return null;
+    }
+
+    /**
+     * Restores the saved split size between the base view and target note leaf.
+     */
+    restoreSplitSizeForContext(contextEl?: HTMLElement | null, targetLeaf?: WorkspaceLeaf | null): void {
+        const baseLeaf = this.findBaseLeafForContext(contextEl);
+        if (!baseLeaf) return;
+
+        const target = targetLeaf || this.lastTargetSplitLeaf || this.findExistingSplitLeaf();
+        if (!target) return;
+
+        const savedRatio = this.getSavedSplitSize(contextEl, baseLeaf);
+        if (!savedRatio || savedRatio < 15 || savedRatio > 85) return;
+
+        const baseTabs = (baseLeaf as any).parent;
+        const noteTabs = (target as any).parent;
+        if (!baseTabs || !noteTabs || baseTabs.parent !== noteTabs.parent) return;
+
+        const parentSplit = baseTabs.parent;
+        this.applySplitRatio(baseTabs, noteTabs, parentSplit, savedRatio);
+    }
+
+    /**
+     * Applies the split ratio to both tabs containers.
+     */
+    applySplitRatio(baseTabs: any, noteTabs: any, parentSplit: any, savedRatio: number): void {
+        const apply = () => {
+            const baseRatio = savedRatio;
+            const noteRatio = 100 - savedRatio;
+
+            if (typeof baseTabs.setDimension === 'function') {
+                baseTabs.setDimension(baseRatio);
+            }
+            if (typeof noteTabs.setDimension === 'function') {
+                noteTabs.setDimension(noteRatio);
+            }
+            if (baseTabs.containerEl) {
+                baseTabs.containerEl.style.flexGrow = String(baseRatio);
+            }
+            if (noteTabs.containerEl) {
+                noteTabs.containerEl.style.flexGrow = String(noteRatio);
+            }
+            if (typeof parentSplit?.recomputeChildrenDimensions === 'function') {
+                parentSplit.recomputeChildrenDimensions();
+            }
+            if (typeof (this.app.workspace as any).requestResize === 'function') {
+                (this.app.workspace as any).requestResize();
+            }
+        };
+
+        apply();
+        setTimeout(apply, 50);
+        setTimeout(apply, 150);
+    }
+
+    /**
+     * Debounced handler for workspace resize events to record user-adjusted split ratios.
+     */
+    handleWorkspaceResize(): void {
+        if (this.resizeDebounceTimer) {
+            clearTimeout(this.resizeDebounceTimer);
+        }
+        this.resizeDebounceTimer = setTimeout(() => {
+            this.checkAndSaveCurrentSplitSize();
+            this.resizeDebounceTimer = null;
+        }, 300);
+    }
+
+    /**
+     * Checks if a base split is currently open and saves the user-adjusted ratio.
+     */
+    checkAndSaveCurrentSplitSize(): void {
+        let foundPair: any = null;
+
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (foundPair) return;
+            if (!this.isMainWorkspaceLeaf(leaf) || !this.isBaseLeaf(leaf)) return;
+
+            const baseTabs = (leaf as any).parent;
+            const parentSplit = baseTabs?.parent;
+            if (!parentSplit || !Array.isArray(parentSplit.children) || parentSplit.children.length < 2) return;
+
+            for (const sibling of parentSplit.children) {
+                if (sibling === baseTabs) continue;
+                const hasEditorLeaf = sibling.children?.some(
+                    (l: WorkspaceLeaf) => !this.isBaseLeaf(l) && l.view?.getViewType?.() !== 'empty'
+                );
+                if (hasEditorLeaf) {
+                    foundPair = { baseLeaf: leaf, baseTabs, noteTabs: sibling, parentSplit };
+                    break;
+                }
+            }
+        });
+
+        if (!foundPair) return;
+
+        const { baseLeaf, baseTabs, noteTabs, parentSplit } = foundPair;
+        const isVertical = parentSplit.direction === 'vertical';
+        const baseSize = isVertical ? baseTabs.containerEl?.offsetWidth : baseTabs.containerEl?.offsetHeight;
+        const noteSize = isVertical ? noteTabs.containerEl?.offsetWidth : noteTabs.containerEl?.offsetHeight;
+
+        if (!baseSize || !noteSize || baseSize + noteSize === 0) return;
+
+        const ratio = Math.round((baseSize / (baseSize + noteSize)) * 100);
+        if (ratio < 15 || ratio > 85) return;
+
+        const hostFile = this.baseResolver?.resolveHostFile ? this.baseResolver.resolveHostFile(baseLeaf.view?.containerEl) : null;
+        const baseFile = this.baseResolver?.resolveBaseFileSync ? this.baseResolver.resolveBaseFileSync(baseLeaf.view?.containerEl) : null;
+
+        const settings = this.getSettings();
+        if (!settings.perBaseSplitSizes) {
+            settings.perBaseSplitSizes = {};
+        }
+
+        let hasChanges = false;
+        if (baseFile && settings.perBaseSplitSizes[baseFile.path] !== ratio) {
+            settings.perBaseSplitSizes[baseFile.path] = ratio;
+            hasChanges = true;
+        }
+        if (hostFile && hostFile !== baseFile && settings.perBaseSplitSizes[hostFile.path] !== ratio) {
+            settings.perBaseSplitSizes[hostFile.path] = ratio;
+            hasChanges = true;
+        }
+
+        if (hasChanges && this.saveSettings) {
+            this.saveSettings();
+        }
+    }
+
+    /**
      * Gets an existing split leaf or creates a new one via originalGetLeaf('split').
      */
     getOrCreateSplitLeaf(): WorkspaceLeaf {
         const existing = this.findExistingSplitLeaf();
         if (existing) {
+            this.restoreSplitSizeForContext(this.lastInteractionTarget, existing);
             return existing;
         }
 
@@ -230,6 +411,7 @@ export class NavigationHandler {
             : (this.app.workspace.getLeaf as any)('split');
 
         this.lastTargetSplitLeaf = newLeaf;
+        this.restoreSplitSizeForContext(this.lastInteractionTarget, newLeaf);
         return newLeaf;
     }
 
@@ -246,6 +428,7 @@ export class NavigationHandler {
         let leaf: WorkspaceLeaf;
         if (effectiveMode === 'split') {
             leaf = this.getOrCreateSplitLeaf();
+            this.restoreSplitSizeForContext(contextEl || this.lastInteractionTarget, leaf);
         } else if (effectiveMode === 'tab') {
             // @ts-ignore Obsidian supports getLeaf('tab')
             leaf = this.app.workspace.getLeaf('tab');
@@ -262,6 +445,10 @@ export class NavigationHandler {
      * Restores original methods on unload.
      */
     teardown(): void {
+        if (this.resizeDebounceTimer) {
+            clearTimeout(this.resizeDebounceTimer);
+            this.resizeDebounceTimer = null;
+        }
         if (this.originalOpenLinkText) {
             this.app.workspace.openLinkText = this.originalOpenLinkText;
             this.originalOpenLinkText = null;

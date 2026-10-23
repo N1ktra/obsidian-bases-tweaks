@@ -29,7 +29,8 @@ export default class BasesTweaksPlugin extends Plugin {
         this.navigationHandler = new NavigationHandler(
             this.app,
             this.baseResolver,
-            () => this.settings
+            () => this.settings,
+            () => this.saveSettings()
         );
         this.navigationHandler.init();
         this.cardCreator = new CardCreator(
@@ -96,6 +97,11 @@ export default class BasesTweaksPlugin extends Plugin {
         );
         this.registerEvent(
             this.app.workspace.on('active-leaf-change', () => this.scheduleButtonUpdate())
+        );
+        this.registerEvent(
+            this.app.workspace.on('resize', () => {
+                this.navigationHandler.handleWorkspaceResize();
+            })
         );
         this.registerEvent(
             this.app.vault.on('rename', (file, oldPath) => {
@@ -172,19 +178,36 @@ export default class BasesTweaksPlugin extends Plugin {
     async handleFileRename(newPath: string, oldPath: string): Promise<void> {
         let hasChanges = false;
         const modes = this.settings.perPageOpenModes;
-        if (!modes) return;
+        if (modes) {
+            for (const key of Object.keys(modes)) {
+                if (key === oldPath) {
+                    modes[newPath] = modes[key];
+                    delete modes[key];
+                    hasChanges = true;
+                } else if (key.startsWith(oldPath + '/')) {
+                    const subPath = key.slice(oldPath.length);
+                    const updatedKey = newPath + subPath;
+                    modes[updatedKey] = modes[key];
+                    delete modes[key];
+                    hasChanges = true;
+                }
+            }
+        }
 
-        for (const key of Object.keys(modes)) {
-            if (key === oldPath) {
-                modes[newPath] = modes[key];
-                delete modes[key];
-                hasChanges = true;
-            } else if (key.startsWith(oldPath + '/')) {
-                const subPath = key.slice(oldPath.length);
-                const updatedKey = newPath + subPath;
-                modes[updatedKey] = modes[key];
-                delete modes[key];
-                hasChanges = true;
+        const splitSizes = this.settings.perBaseSplitSizes;
+        if (splitSizes) {
+            for (const key of Object.keys(splitSizes)) {
+                if (key === oldPath) {
+                    splitSizes[newPath] = splitSizes[key];
+                    delete splitSizes[key];
+                    hasChanges = true;
+                } else if (key.startsWith(oldPath + '/')) {
+                    const subPath = key.slice(oldPath.length);
+                    const updatedKey = newPath + subPath;
+                    splitSizes[updatedKey] = splitSizes[key];
+                    delete splitSizes[key];
+                    hasChanges = true;
+                }
             }
         }
 
@@ -197,12 +220,22 @@ export default class BasesTweaksPlugin extends Plugin {
     async handleFileDelete(deletedPath: string): Promise<void> {
         let hasChanges = false;
         const modes = this.settings.perPageOpenModes;
-        if (!modes) return;
+        if (modes) {
+            for (const key of Object.keys(modes)) {
+                if (key === deletedPath || key.startsWith(deletedPath + '/')) {
+                    delete modes[key];
+                    hasChanges = true;
+                }
+            }
+        }
 
-        for (const key of Object.keys(modes)) {
-            if (key === deletedPath || key.startsWith(deletedPath + '/')) {
-                delete modes[key];
-                hasChanges = true;
+        const splitSizes = this.settings.perBaseSplitSizes;
+        if (splitSizes) {
+            for (const key of Object.keys(splitSizes)) {
+                if (key === deletedPath || key.startsWith(deletedPath + '/')) {
+                    delete splitSizes[key];
+                    hasChanges = true;
+                }
             }
         }
 

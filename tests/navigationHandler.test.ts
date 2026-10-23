@@ -48,12 +48,14 @@ describe('navigationHandler', () => {
 
             const mockBaseResolver = {
                 resolveHostFile: () => null,
+                resolveBaseFileSync: () => null,
             } as any;
 
             const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
                 baseOpenMode: 'split',
                 defaultNoteTitlePrefix: 'Neuer Eintrag',
                 perPageOpenModes: {},
+                perBaseSplitSizes: {},
             }));
 
             const resultLeaf = handler.getOrCreateSplitLeaf();
@@ -83,12 +85,14 @@ describe('navigationHandler', () => {
 
             const mockBaseResolver = {
                 resolveHostFile: () => null,
+                resolveBaseFileSync: () => null,
             } as any;
 
             const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
                 baseOpenMode: 'split',
                 defaultNoteTitlePrefix: 'Neuer Eintrag',
                 perPageOpenModes: {},
+                perBaseSplitSizes: {},
             }));
 
             // First call finds existing leaf
@@ -122,6 +126,7 @@ describe('navigationHandler', () => {
                 perPageOpenModes: {
                     'Uni/SwSec.md': 'tab',
                 },
+                perBaseSplitSizes: {},
             }));
 
             const mode = handler.getEffectiveModeForContext({} as any);
@@ -146,6 +151,7 @@ describe('navigationHandler', () => {
                 perPageOpenModes: {
                     'Uni/Uni-Notizen.base': 'current',
                 },
+                perBaseSplitSizes: {},
             }));
 
             const mode = handler.getEffectiveModeForContext({} as any);
@@ -171,10 +177,133 @@ describe('navigationHandler', () => {
                     'Uni/SwSec.md': 'tab',
                     'Uni/Uni-Notizen.base': 'current',
                 },
+                perBaseSplitSizes: {},
             }));
 
             const mode = handler.getEffectiveModeForContext({} as any);
             expect(mode).toBe('tab'); // Host note override takes precedence
+        });
+    });
+
+    describe('split size memory and restoration', () => {
+        it('restores saved split ratio when creating split leaf', () => {
+            const baseTabs = {
+                containerEl: { style: {} as any },
+                setDimension: vi.fn(),
+                parent: null as any,
+            };
+            const noteTabs = {
+                containerEl: { style: {} as any },
+                setDimension: vi.fn(),
+                parent: null as any,
+            };
+            const parentSplit = {
+                children: [baseTabs, noteTabs],
+                recomputeChildrenDimensions: vi.fn(),
+            };
+            baseTabs.parent = parentSplit;
+            noteTabs.parent = parentSplit;
+
+            const baseLeaf = new WorkspaceLeaf();
+            baseLeaf.view.getViewType = () => 'base';
+            baseLeaf.parent = baseTabs as any;
+
+            const newSplitLeaf = new WorkspaceLeaf();
+            newSplitLeaf.view.getViewType = () => 'markdown';
+            newSplitLeaf.parent = noteTabs as any;
+
+            const baseFile = { path: 'Projects.base' };
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+                resolveBaseFileSync: () => baseFile,
+            } as any;
+
+            const mockApp = {
+                workspace: {
+                    rootSplit: {},
+                    getLeaf: vi.fn((type: string) => newSplitLeaf),
+                    iterateAllLeaves: (cb: (leaf: any) => void) => {
+                        cb(baseLeaf);
+                        cb(newSplitLeaf);
+                    },
+                    requestResize: vi.fn(),
+                },
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
+                baseOpenMode: 'split',
+                defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {},
+                perBaseSplitSizes: {
+                    'Projects.base': 70,
+                },
+            }));
+
+            handler.getOrCreateSplitLeaf();
+
+            expect(baseTabs.setDimension).toHaveBeenCalledWith(70);
+            expect(noteTabs.setDimension).toHaveBeenCalledWith(30);
+            expect(baseTabs.containerEl.style.flexGrow).toBe('70');
+            expect(noteTabs.containerEl.style.flexGrow).toBe('30');
+            expect(parentSplit.recomputeChildrenDimensions).toHaveBeenCalled();
+            expect(mockApp.workspace.requestResize).toHaveBeenCalled();
+        });
+
+        it('saves current split ratio on workspace resize', () => {
+            const baseTabs = {
+                containerEl: { offsetWidth: 700, style: {} },
+                parent: null as any,
+            };
+            const noteTabs = {
+                containerEl: { offsetWidth: 300, style: {} },
+                children: [new WorkspaceLeaf()],
+                parent: null as any,
+            };
+            const parentSplit = {
+                direction: 'vertical',
+                children: [baseTabs, noteTabs],
+            };
+            baseTabs.parent = parentSplit;
+            noteTabs.parent = parentSplit;
+
+            const baseLeaf = new WorkspaceLeaf();
+            baseLeaf.view.getViewType = () => 'base';
+            baseLeaf.parent = baseTabs as any;
+
+            const baseFile = { path: 'Board.base' };
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+                resolveBaseFileSync: () => baseFile,
+            } as any;
+
+            const settings = {
+                baseOpenMode: 'split' as const,
+                defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {},
+                perBaseSplitSizes: {} as Record<string, number>,
+            };
+            const saveSettingsMock = vi.fn().mockResolvedValue(undefined);
+
+            const mockApp = {
+                workspace: {
+                    rootSplit: {},
+                    iterateAllLeaves: (cb: (leaf: any) => void) => {
+                        cb(baseLeaf);
+                    },
+                },
+            } as any;
+
+            const handler = new NavigationHandler(
+                mockApp,
+                mockBaseResolver,
+                () => settings,
+                saveSettingsMock
+            );
+
+            handler.checkAndSaveCurrentSplitSize();
+
+            expect(settings.perBaseSplitSizes['Board.base']).toBe(70);
+            expect(saveSettingsMock).toHaveBeenCalled();
         });
     });
 });

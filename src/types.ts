@@ -6,6 +6,7 @@ export interface BasesTweaksSettings {
     baseOpenMode: BaseOpenMode;
     defaultNoteTitlePrefix: string;
     perPageOpenModes: Record<string, BaseOpenMode>;
+    perBaseSplitSizes: Record<string, number>;
 }
 
 export interface FilterPropertyMap {

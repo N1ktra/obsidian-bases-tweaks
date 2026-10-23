@@ -25,6 +25,11 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
    - Erstellt das Dokument, weist den Spaltenwert zu und vererbt alle aktiven Base-Filter.
    - Da die Eigenschaft nun im Vault existiert, blendet Obsidian Bases die neue Spalte sofort auf dem Board ein.
 
+4. **Split-Screen-Größenerkennung & automatische Wiederherstellung**:
+   - Merkt sich automatisch die eingestellte Split-Breite (Prozentverhältnis) pro Base bzw. Host-Notiz, sobald der Trennbalken verschoben wird.
+   - Beim erneuten Öffnen von Dokumenten aus der Base im Split-Modus wird das zuletzt eingestellte Verhältnis nahtlos wiederhergestellt (anstelle des Obsidian-Standards von 50/50).
+   - Pfadänderungen und Umbenennungen von Base-Dateien werden automatisch in den Einstellungen mitgeführt.
+
 ---
 
 ## Architektur

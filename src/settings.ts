@@ -6,6 +6,7 @@ export const DEFAULT_SETTINGS: BasesTweaksSettings = {
     baseOpenMode: 'current',
     defaultNoteTitlePrefix: 'Neuer Eintrag',
     perPageOpenModes: {},
+    perBaseSplitSizes: {},
 };
 
 export class BasesTweaksSettingTab extends PluginSettingTab {
