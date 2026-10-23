@@ -1,11 +1,13 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import type BasesTweaksPlugin from './main';
-import { BaseOpenMode, BasesTweaksSettings } from './types';
+import { BaseOpenMode, BasesTweaksSettings, SplitSizeScope } from './types';
 
 export const DEFAULT_SETTINGS: BasesTweaksSettings = {
     baseOpenMode: 'current',
     defaultNoteTitlePrefix: 'Neuer Eintrag',
     perPageOpenModes: {},
+    splitSizeScope: 'per-base',
+    globalSplitSize: null,
     perBaseSplitSizes: {},
 };
 
@@ -38,6 +40,24 @@ export class BasesTweaksSettingTab extends PluginSettingTab {
                     .setValue(this.plugin.settings.baseOpenMode)
                     .onChange(async (value: string) => {
                         this.plugin.settings.baseOpenMode = value as BaseOpenMode;
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('Split-Screen-Breite merken')
+            .setDesc(
+                'Legt fest, ob die eingestellte Split-Breite global für alle Bases gemeinsam oder individuell pro Base gemerkt werden soll.'
+            )
+            .addDropdown((dropdown) => {
+                dropdown
+                    .addOptions({
+                        'per-base': 'Individuell pro Base merken',
+                        global: 'Global für alle Bases merken',
+                    })
+                    .setValue(this.plugin.settings.splitSizeScope || 'per-base')
+                    .onChange(async (value: string) => {
+                        this.plugin.settings.splitSizeScope = value as SplitSizeScope;
                         await this.plugin.saveSettings();
                     });
             });

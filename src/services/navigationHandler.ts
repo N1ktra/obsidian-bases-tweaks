@@ -252,17 +252,27 @@ export class NavigationHandler {
      * Resolves the saved split size (dimension percentage) for the current base.
      */
     getSavedSplitSize(contextEl?: HTMLElement | null, baseLeaf?: WorkspaceLeaf | null): number | null {
+        const settings = this.getSettings();
+
+        if (settings.splitSizeScope === 'global') {
+            return typeof settings.globalSplitSize === 'number' ? settings.globalSplitSize : null;
+        }
+
         const el = contextEl || this.lastInteractionTarget || baseLeaf?.view?.containerEl;
         const hostFile = this.baseResolver?.resolveHostFile ? this.baseResolver.resolveHostFile(el) : null;
         const baseFile = this.baseResolver?.resolveBaseFileSync ? this.baseResolver.resolveBaseFileSync(el) : null;
 
-        const perBaseSizes = this.getSettings().perBaseSplitSizes || {};
+        const perBaseSizes = settings.perBaseSplitSizes || {};
 
         if (hostFile && typeof perBaseSizes[hostFile.path] === 'number') {
             return perBaseSizes[hostFile.path];
         }
         if (baseFile && typeof perBaseSizes[baseFile.path] === 'number') {
             return perBaseSizes[baseFile.path];
+        }
+
+        if (typeof settings.globalSplitSize === 'number') {
+            return settings.globalSplitSize;
         }
 
         return null;
@@ -377,6 +387,18 @@ export class NavigationHandler {
         const baseFile = this.baseResolver?.resolveBaseFileSync ? this.baseResolver.resolveBaseFileSync(baseLeaf.view?.containerEl) : null;
 
         const settings = this.getSettings();
+
+        // If global scope is selected, save just one single global entry
+        if (settings.splitSizeScope === 'global') {
+            if (settings.globalSplitSize !== ratio) {
+                settings.globalSplitSize = ratio;
+                if (this.saveSettings) {
+                    this.saveSettings();
+                }
+            }
+            return;
+        }
+
         if (!settings.perBaseSplitSizes) {
             settings.perBaseSplitSizes = {};
         }

@@ -1,11 +1,14 @@
 import { TFile } from 'obsidian';
 
 export type BaseOpenMode = 'current' | 'tab' | 'split';
+export type SplitSizeScope = 'global' | 'per-base';
 
 export interface BasesTweaksSettings {
     baseOpenMode: BaseOpenMode;
     defaultNoteTitlePrefix: string;
     perPageOpenModes: Record<string, BaseOpenMode>;
+    splitSizeScope: SplitSizeScope;
+    globalSplitSize: number | null;
     perBaseSplitSizes: Record<string, number>;
 }
 

@@ -21,6 +21,8 @@ describe('main plugin rename handling', () => {
                 'Alle Seiten/Uni/📂 Uni-Notizen.base': 'tab',
                 'Alle Seiten/Uni/Sub/Note.md': 'current',
             },
+            splitSizeScope: 'per-base',
+            globalSplitSize: null,
             perBaseSplitSizes: {
                 'Alle Seiten/Uni/📂 Uni-Notizen.base': 65,
                 'Alle Seiten/Uni/Sub/Note.md': 45,
@@ -58,6 +60,8 @@ describe('main plugin rename handling', () => {
                 'Notes/Deleted.md': 'split',
                 'Notes/Kept.md': 'tab',
             },
+            splitSizeScope: 'per-base',
+            globalSplitSize: null,
             perBaseSplitSizes: {
                 'Notes/Deleted.md': 60,
                 'Notes/Kept.md': 40,
