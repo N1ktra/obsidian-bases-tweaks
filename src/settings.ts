@@ -1,17 +1,17 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import type KanbanBasesPlusPlugin from './main';
-import { BaseOpenMode, KanbanBasesPlusSettings } from './types';
+import type BasesTweaksPlugin from './main';
+import { BaseOpenMode, BasesTweaksSettings } from './types';
 
-export const DEFAULT_SETTINGS: KanbanBasesPlusSettings = {
-    baseOpenMode: 'split',
+export const DEFAULT_SETTINGS: BasesTweaksSettings = {
+    baseOpenMode: 'current',
     defaultNoteTitlePrefix: 'Neuer Eintrag',
     perPageOpenModes: {},
 };
 
-export class KanbanBasesPlusSettingTab extends PluginSettingTab {
-    plugin: KanbanBasesPlusPlugin;
+export class BasesTweaksSettingTab extends PluginSettingTab {
+    plugin: BasesTweaksPlugin;
 
-    constructor(app: App, plugin: KanbanBasesPlusPlugin) {
+    constructor(app: App, plugin: BasesTweaksPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -20,7 +20,7 @@ export class KanbanBasesPlusSettingTab extends PluginSettingTab {
         const { containerEl } = this;
         containerEl.empty();
 
-        containerEl.createEl('h2', { text: 'Bases Kanban Plus Einstellungen' });
+        containerEl.createEl('h2', { text: 'Bases Tweaks Einstellungen' });
 
         new Setting(containerEl)
             .setName('Öffnungsmodus für Base-Dokumente')

@@ -3,13 +3,13 @@ import { BaseResolver } from './services/baseResolver';
 import { BaseViewService } from './services/baseViewService';
 import { CardCreator } from './services/cardCreator';
 import { NavigationHandler } from './services/navigationHandler';
-import { DEFAULT_SETTINGS, KanbanBasesPlusSettingTab } from './settings';
-import { KanbanBasesPlusSettings } from './types';
+import { DEFAULT_SETTINGS, BasesTweaksSettingTab } from './settings';
+import { BasesTweaksSettings } from './types';
 import { HeaderButtonManager } from './ui/headerButtonManager';
 import { OpenModeButtonManager } from './ui/openModeButtonManager';
 
-export default class KanbanBasesPlusPlugin extends Plugin {
-    settings: KanbanBasesPlusSettings = DEFAULT_SETTINGS;
+export default class BasesTweaksPlugin extends Plugin {
+    settings: BasesTweaksSettings = DEFAULT_SETTINGS;
     baseResolver!: BaseResolver;
     baseViewService!: BaseViewService;
     navigationHandler!: NavigationHandler;
@@ -52,7 +52,7 @@ export default class KanbanBasesPlusPlugin extends Plugin {
         );
 
         // 2. Settings tab
-        this.addSettingTab(new KanbanBasesPlusSettingTab(this.app, this));
+        this.addSettingTab(new BasesTweaksSettingTab(this.app, this));
 
         // 3. Register DOM pointerdown listener
         this.registerDomEvent(

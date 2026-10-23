@@ -1,6 +1,6 @@
 import { App, Menu, setIcon } from 'obsidian';
 import { BaseResolver } from '../services/baseResolver';
-import { BaseOpenMode, KanbanBasesPlusSettings } from '../types';
+import { BaseOpenMode, BasesTweaksSettings } from '../types';
 
 export class OpenModeButtonManager {
     private isUpdating = false;
@@ -8,7 +8,7 @@ export class OpenModeButtonManager {
     constructor(
         private app: App,
         private baseResolver: BaseResolver,
-        private getSettings: () => KanbanBasesPlusSettings,
+        private getSettings: () => BasesTweaksSettings,
         private saveSettings: () => Promise<void>
     ) {}
 

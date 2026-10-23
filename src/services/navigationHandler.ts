@@ -1,5 +1,5 @@
 import { App, Platform, TFile, WorkspaceLeaf } from 'obsidian';
-import { BaseOpenMode, KanbanBasesPlusSettings } from '../types';
+import { BaseOpenMode, BasesTweaksSettings } from '../types';
 import { BaseResolver } from './baseResolver';
 
 /**
@@ -28,7 +28,7 @@ export class NavigationHandler {
     constructor(
         private app: App,
         private baseResolver: BaseResolver,
-        private getSettings: () => KanbanBasesPlusSettings
+        private getSettings: () => BasesTweaksSettings
     ) {}
 
     /**

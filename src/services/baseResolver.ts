@@ -102,7 +102,7 @@ export class BaseResolver {
                     return activeFile;
                 }
             } catch (e) {
-                console.error('[Kanban Bases Plus] Error reading active file for base resolution:', e);
+                console.error('[Bases Tweaks] Error reading active file for base resolution:', e);
             }
         }
 

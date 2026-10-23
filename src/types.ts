@@ -2,7 +2,7 @@ import { TFile } from 'obsidian';
 
 export type BaseOpenMode = 'current' | 'tab' | 'split';
 
-export interface KanbanBasesPlusSettings {
+export interface BasesTweaksSettings {
     baseOpenMode: BaseOpenMode;
     defaultNoteTitlePrefix: string;
     perPageOpenModes: Record<string, BaseOpenMode>;

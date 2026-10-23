@@ -82,7 +82,7 @@ export class BaseViewService {
                 config: parsedConfig,
             };
         } catch (e) {
-            console.error('[Kanban Bases Plus] Error detecting grouping:', e);
+            console.error('[Bases Tweaks] Error detecting grouping:', e);
             return {
                 isGrouped: false,
                 groupProperty: null,

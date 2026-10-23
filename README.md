@@ -1,4 +1,4 @@
-# Bases Kanban Plus (Obsidian Plugin)
+# Bases Tweaks (Obsidian Plugin)
 
 Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-Vererbung aus Base-Filtern, Steuerung des Öffnungsverhaltens für Dokumente und dynamischer Spaltenerstellung.
 
@@ -12,14 +12,15 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
    - Filtert technische Systemproperties (`file.*`) automatisch heraus.
 
 2. **Flexibler Öffnungsmodus (Desktop, Tablet & Smartphone)**:
-   - Einstellung in den Plugin-Optionen:
-     - **Im Split-Modus**: Öffnet neu erstellte Notizen oder aus der Base angeklickte Seiten geteilt neben der Base.
-     - **Im neuen Tab**: Öffnet Seiten in einem neuen Tab.
-     - **Im gleichen Tab**: Verwendet den aktuellen Tab.
+   - Einstellung per Dropdown direkt in der Base-Toolbar oder in den Plugin-Optionen:
+     - **Split-Modus**: Öffnet neu erstellte Notizen oder aus der Base angeklickte Seiten geteilt neben der Base (existierender Split wird intelligent wiederverwendet).
+     - **Neuer Tab**: Öffnet Seiten in einem neuen Tab.
+     - **Selber Tab**: Verwendet den aktuellen Tab.
+   - **Seiten- vs. Base-Überschreibung**: Öffnungsmodus kann global, für die Base selbst oder seitenspezifisch (für Embeds) festgelegt werden.
    - **Mobile-Regel**: Auf Smartphones (`Platform.isPhone`) wird **immer** im gleichen Tab geöffnet, um das Layout auf kleinen Bildschirmen optimal zu nutzen. Auf Desktop und Tablets greift die konfigurierte Einstellung.
 
 3. **Dynamischer "+ Spalte"-Button im Header**:
-   - Erscheint automatisch im Header/Toolbar der Base, **wenn die aktive Ansicht nach einer Eigenschaft gruppiert ist** (z. B. `Status`, `Dringlichkeit`, `Kategorie` oder Ordner).
+   - Erscheint automatisch im Toolbar der Base, **wenn die aktive Ansicht nach einer Eigenschaft gruppiert ist** (z. B. `Status`, `Dringlichkeit`, `Kategorie` oder Ordner).
    - Öffnet einen Dialog zur Eingabe des neuen Spaltenwerts und optionalen Notiztitels.
    - Erstellt das Dokument, weist den Spaltenwert zu und vererbt alle aktiven Base-Filter.
    - Da die Eigenschaft nun im Vault existiert, blendet Obsidian Bases die neue Spalte sofort auf dem Board ein.
@@ -29,7 +30,7 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
 ## Architektur
 
 ```
-kanban-bases-plus/
+bases-tweaks/
 ├── src/
 │   ├── main.ts                     # Plugin-Lifecycle, Event-Registrierung & Observer
 │   ├── types.ts                    # TypeScript Interfaces & Typen
@@ -38,17 +39,20 @@ kanban-bases-plus/
 │   │   ├── filterParser.ts         # YAML-Parsing von Root- & View-Filtern
 │   │   ├── baseResolver.ts         # Auflösen von .base-Dateien (DOM, Embeds, Leaf)
 │   │   ├── baseViewService.ts      # Gruppierungserkennung (groupBy.property)
-│   │   ├── navigationHandler.ts    # Öffnungsmodus-Steuerung mit Phone-Erkennung
+│   │   ├── navigationHandler.ts    # Öffnungsmodus-Steuerung mit Phone-Erkennung & Split-Wiederverwendung
 │   │   └── cardCreator.ts          # Atomares Frontmatter-Writing & Dateierstellung
 │   └── ui/
-│       ├── headerButtonManager.ts  # Dynamische Injektion des "+ Spalte"-Buttons
+│       ├── headerButtonManager.ts  # Dynamische Injektion des "+ Spalte"-Buttons in die Toolbar
+│       ├── openModeButtonManager.ts# Injektion des Öffnungsmodus-Dropdowns
 │       └── newColumnModal.ts       # Dialog zur Eingabe von Spaltenwert & Titel
 └── tests/
     ├── mocks/obsidian.ts           # Obsidian API Mock für Tests
     ├── filterParser.test.ts        # Unit Tests für Filter-Parsing
     ├── navigationHandler.test.ts   # Tests für Phone- und Desktop-Öffnungsmodi
     ├── baseViewService.test.ts     # Tests für Gruppierungs-Erkennung
-    └── cardCreator.test.ts         # Tests für atomare Frontmatter-Aktualisierung
+    ├── baseResolver.test.ts        # Tests für Base- und Host-File-Auflösung
+    ├── cardCreator.test.ts         # Tests für atomare Frontmatter-Aktualisierung
+    └── mainRename.test.ts          # Tests für Umbenennungshandling
 ```
 
 ---

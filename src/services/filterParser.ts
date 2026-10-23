@@ -308,7 +308,7 @@ export function parseBaseFiltersFromYaml(
             }
         }
     } catch (err) {
-        console.error('[Kanban Bases Plus] YAML parsing failed:', err);
+        console.error('[Bases Tweaks] YAML parsing failed:', err);
     }
 
     return { properties: props, targetFolder, parsedConfig };

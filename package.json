@@ -1,5 +1,5 @@
 {
-  "name": "kanban-bases-plus",
+  "name": "bases-tweaks",
   "version": "1.0.0",
   "description": "Auto-inherits filter properties on card creation in Obsidian Bases, adds a new column button when grouped, and customizes base note opening modes for desktop, tablet, and mobile.",
   "main": "main.js",

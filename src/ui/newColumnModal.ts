@@ -32,11 +32,11 @@ export class NewColumnModal extends Modal {
     onOpen(): void {
         const { contentEl } = this;
         contentEl.empty();
-        contentEl.addClass('bases-plus-modal-content');
+        contentEl.addClass('bases-tweaks-modal-content');
 
         contentEl.createEl('h2', { text: 'Neue Spalte / Eintrag erstellen' });
 
-        const descEl = contentEl.createEl('p', { cls: 'bases-plus-modal-desc' });
+        const descEl = contentEl.createEl('p', { cls: 'bases-tweaks-modal-desc' });
         descEl.innerHTML = `Das Board ist nach <strong>${this.groupProperty}</strong> gruppiert. Durch das Erstellen dieses Dokuments wird die entsprechende Spalte im Board erzeugt.`;
 
         // 1. Spaltenwert Input
@@ -82,7 +82,7 @@ export class NewColumnModal extends Modal {
         // Info about inherited filter properties
         const filterKeys = Object.keys(this.filterProperties);
         if (filterKeys.length > 0) {
-            const filterInfoEl = contentEl.createEl('div', { cls: 'bases-plus-modal-desc' });
+            const filterInfoEl = contentEl.createEl('div', { cls: 'bases-tweaks-modal-desc' });
             const filterSummary = filterKeys
                 .map((k) => `${k}: ${JSON.stringify(this.filterProperties[k])}`)
                 .join(', ');
@@ -90,7 +90,7 @@ export class NewColumnModal extends Modal {
         }
 
         // Action buttons
-        const buttonContainer = contentEl.createEl('div', { cls: 'bases-plus-modal-buttons' });
+        const buttonContainer = contentEl.createEl('div', { cls: 'bases-tweaks-modal-buttons' });
 
         const cancelBtn = buttonContainer.createEl('button', { text: 'Abbrechen' });
         cancelBtn.addEventListener('click', () => this.close());
@@ -139,7 +139,7 @@ export class NewColumnModal extends Modal {
             );
             new Notice(`Spalte "${trimmedValue}" mit Notiz "${createdFile.basename}" erstellt.`);
         } catch (err) {
-            console.error('[Kanban Bases Plus] Failed to create column document:', err);
+            console.error('[Bases Tweaks] Failed to create column document:', err);
             new Notice(`Fehler beim Erstellen der Spalte: ${err}`);
         }
     }

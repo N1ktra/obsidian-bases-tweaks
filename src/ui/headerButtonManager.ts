@@ -3,7 +3,7 @@ import { BaseResolver } from '../services/baseResolver';
 import { BaseViewService } from '../services/baseViewService';
 import { CardCreator } from '../services/cardCreator';
 import { parseBaseFiltersFromYaml } from '../services/filterParser';
-import { KanbanBasesPlusSettings } from '../types';
+import { BasesTweaksSettings } from '../types';
 import { NewColumnModal } from './newColumnModal';
 
 export class HeaderButtonManager {
@@ -14,7 +14,7 @@ export class HeaderButtonManager {
         private baseResolver: BaseResolver,
         private baseViewService: BaseViewService,
         private cardCreator: CardCreator,
-        private getSettings: () => KanbanBasesPlusSettings
+        private getSettings: () => BasesTweaksSettings
     ) {}
 
     /**
@@ -28,7 +28,7 @@ export class HeaderButtonManager {
             // 1. Remove any stray buttons that were previously added to the Obsidian leaf header
             document
                 .querySelectorAll(
-                    '.view-header .bases-plus-column-button, .view-actions .bases-plus-column-button, .view-header .bases-toolbar-new-column'
+                    '.view-header .bases-tweaks-column-button, .view-actions .bases-tweaks-column-button, .view-header .bases-toolbar-new-column'
                 )
                 .forEach((el) => el.remove());
 
@@ -175,7 +175,7 @@ export class HeaderButtonManager {
      */
     cleanup(): void {
         const items = document.querySelectorAll(
-            '.bases-toolbar-new-column, .bases-plus-column-button'
+            '.bases-toolbar-new-column, .bases-tweaks-column-button'
         );
         items.forEach((b) => b.remove());
     }

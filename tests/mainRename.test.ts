@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import KanbanBasesPlusPlugin from '../src/main';
+import BasesTweaksPlugin from '../src/main';
 
 describe('main plugin rename handling', () => {
     it('migrates perPageOpenModes when a file is renamed or moved', async () => {
@@ -13,7 +13,7 @@ describe('main plugin rename handling', () => {
             },
         } as any;
 
-        const plugin = new KanbanBasesPlusPlugin(mockApp, {} as any);
+        const plugin = new BasesTweaksPlugin(mockApp, {} as any);
         plugin.settings = {
             baseOpenMode: 'split',
             defaultNoteTitlePrefix: 'Neuer Eintrag',
@@ -42,7 +42,7 @@ describe('main plugin rename handling', () => {
     });
 
     it('cleans up deleted files from perPageOpenModes', async () => {
-        const plugin = new KanbanBasesPlusPlugin({} as any, {} as any);
+        const plugin = new BasesTweaksPlugin({} as any, {} as any);
         plugin.settings = {
             baseOpenMode: 'split',
             defaultNoteTitlePrefix: 'Neuer Eintrag',
