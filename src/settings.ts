@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS: BasesTweaksSettings = {
     baseOpenMode: 'current',
     defaultNoteTitlePrefix: 'Neuer Eintrag',
     perPageOpenModes: {},
-    splitSizeScope: 'per-base',
+    splitSizeScope: 'global',
     globalSplitSize: null,
     perBaseSplitSizes: {},
 };
