@@ -31,6 +31,12 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
    - Beim erneuten Öffnen von Dokumenten aus der Base im Split-Modus wird das zuletzt eingestellte Verhältnis nahtlos wiederhergestellt (anstelle des Obsidian-Standards von 50/50).
    - Pfadänderungen und Umbenennungen von Base-Dateien werden im Per-Base-Modus automatisch mitgeführt.
 
+5. **Ordnerpfade in Gruppierungen kürzen (Relative Unterordner)**:
+   - Wenn eine Base nach Ordner gruppiert ist (`file.folder`), wird der übergeordnete Basisordner (`this.file.folder` bzw. der Pfad der einbettenden Datei / Base) in `.bases-group-value` ausgeblendet.
+   - Zeigt statt des vollen Pfades (z. B. `Alle Seiten/Uni/Alle Kurse/NetSec/Klausur`) übersichtlich nur den relativen Unterordner an (z. B. `Klausur`).
+   - Befindet sich eine Notiz direkt im Basisordner, wird `/` angezeigt.
+   - Der volle Pfad bleibt als Tooltip (`title`) sowie im Attribut `data-original-group-value` für Kartenerstellung und Plugins erhalten.
+
 ---
 
 ## Architektur
@@ -48,6 +54,7 @@ bases-tweaks/
 │   │   ├── navigationHandler.ts    # Öffnungsmodus-Steuerung mit Phone-Erkennung & Split-Wiederverwendung
 │   │   └── cardCreator.ts          # Atomares Frontmatter-Writing & Dateierstellung
 │   └── ui/
+│       ├── folderGroupManager.ts   # Kürzung von Gruppen-Ordnerwerten (this.file.folder)
 │       ├── headerButtonManager.ts  # Dynamische Injektion des "Spalte"-Buttons in die Toolbar
 │       ├── openModeButtonManager.ts# Injektion des Öffnungsmodus-Dropdowns
 │       └── newColumnModal.ts       # Dialog zur Eingabe von Spaltenwert & Titel

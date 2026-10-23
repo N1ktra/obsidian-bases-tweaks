@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS, BasesTweaksSettingTab } from './settings';
 import { BasesTweaksSettings } from './types';
 import { HeaderButtonManager } from './ui/headerButtonManager';
 import { OpenModeButtonManager } from './ui/openModeButtonManager';
+import { FolderGroupManager } from './ui/folderGroupManager';
 
 export default class BasesTweaksPlugin extends Plugin {
     settings: BasesTweaksSettings = DEFAULT_SETTINGS;
@@ -16,6 +17,7 @@ export default class BasesTweaksPlugin extends Plugin {
     cardCreator!: CardCreator;
     headerButtonManager!: HeaderButtonManager;
     openModeButtonManager!: OpenModeButtonManager;
+    folderGroupManager!: FolderGroupManager;
 
     private mutationObserver: MutationObserver | null = null;
     private debouncedUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -51,6 +53,12 @@ export default class BasesTweaksPlugin extends Plugin {
             () => this.settings,
             () => this.saveSettings()
         );
+        this.folderGroupManager = new FolderGroupManager(
+            this.app,
+            this.baseResolver,
+            this.baseViewService,
+            () => this.settings
+        );
 
         // 2. Settings tab
         this.addSettingTab(new BasesTweaksSettingTab(this.app, this));
@@ -83,13 +91,24 @@ export default class BasesTweaksPlugin extends Plugin {
                 this.navigationHandler.triggerBaseInteraction(button);
 
                 const columnEl = button.closest('.bases-kanban-column');
-                const targetFolder = columnEl?.querySelector('.bases-group-value')?.textContent?.trim();
+                const groupValEl = columnEl?.querySelector('.bases-group-value');
+                const targetFolder =
+                    groupValEl?.getAttribute('data-original-group-value') ||
+                    groupValEl?.textContent?.trim();
 
                 // Trigger background card creation handler
                 this.cardCreator.handleNativeCardCreation(button, targetFolder);
             },
             true
         );
+
+        // Click listener for view tab switching to quickly update buttons & group values
+        this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+            const target = evt.target as HTMLElement | null;
+            if (target?.closest('.bases-view-tab, .bases-tab, .bases-toolbar-views-menu, .bases-view-switcher-item')) {
+                this.scheduleButtonUpdate(150);
+            }
+        });
 
         // 4. Workspace & Vault events
         this.registerEvent(
@@ -124,7 +143,9 @@ export default class BasesTweaksPlugin extends Plugin {
                         if (node instanceof HTMLElement) {
                             if (
                                 node.classList.contains('bases-view') ||
-                                node.querySelector?.('.bases-view, .bases-kanban')
+                                node.classList.contains('bases-group-value') ||
+                                node.classList.contains('bases-kanban-column') ||
+                                node.querySelector?.('.bases-view, .bases-kanban, .bases-group-value, .bases-kanban-column')
                             ) {
                                 shouldUpdate = true;
                                 break;
@@ -157,6 +178,7 @@ export default class BasesTweaksPlugin extends Plugin {
         this.debouncedUpdateTimeout = setTimeout(() => {
             this.headerButtonManager.updateAllButtons();
             this.openModeButtonManager.updateAllButtons();
+            this.folderGroupManager.updateAllGroupValues();
             this.debouncedUpdateTimeout = null;
         }, delayMs);
     }
@@ -173,6 +195,7 @@ export default class BasesTweaksPlugin extends Plugin {
         this.navigationHandler.teardown();
         this.headerButtonManager.cleanup();
         this.openModeButtonManager.cleanup();
+        this.folderGroupManager.cleanup();
     }
 
     async handleFileRename(newPath: string, oldPath: string): Promise<void> {

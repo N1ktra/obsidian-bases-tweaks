@@ -10,6 +10,7 @@ export interface BasesTweaksSettings {
     splitSizeScope: SplitSizeScope;
     globalSplitSize: number | null;
     perBaseSplitSizes: Record<string, number>;
+    shortenFolderGroupNames?: boolean;
 }
 
 export interface FilterPropertyMap {

@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: BasesTweaksSettings = {
     splitSizeScope: 'global',
     globalSplitSize: null,
     perBaseSplitSizes: {},
+    shortenFolderGroupNames: true,
 };
 
 export class BasesTweaksSettingTab extends PluginSettingTab {
@@ -72,6 +73,25 @@ export class BasesTweaksSettingTab extends PluginSettingTab {
                     .onChange(async (value: string) => {
                         this.plugin.settings.defaultNoteTitlePrefix = value.trim() || 'Neuer Eintrag';
                         await this.plugin.saveSettings();
+                    });
+            });
+
+        new Setting(containerEl)
+            .setName('Ordnerpfade in Gruppierungen kürzen')
+            .setDesc(
+                'Blendet bei nach Ordner gruppierten Bases den Basisordner (this.file.folder bzw. den Ordner der einbettenden Datei) aus, sodass nur noch die Unterordner angezeigt werden.'
+            )
+            .addToggle((toggle) => {
+                toggle
+                    .setValue(this.plugin.settings.shortenFolderGroupNames ?? true)
+                    .onChange(async (value: boolean) => {
+                        this.plugin.settings.shortenFolderGroupNames = value;
+                        await this.plugin.saveSettings();
+                        if (value) {
+                            await this.plugin.folderGroupManager.updateAllGroupValues();
+                        } else {
+                            this.plugin.folderGroupManager.restoreAllGroupValues();
+                        }
                     });
             });
     }

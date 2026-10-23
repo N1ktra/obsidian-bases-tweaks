@@ -188,8 +188,13 @@ export function parseYaml(yamlString: string): any {
             if (currentView) {
                 if (trimmed.startsWith('name:')) {
                     currentView.name = trimmed.replace('name:', '').trim();
-                } else if (trimmed === 'groupBy:') {
-                    currentView.groupBy = {};
+                } else if (trimmed.startsWith('groupBy:')) {
+                    const val = trimmed.replace('groupBy:', '').trim();
+                    if (val) {
+                        currentView.groupBy = val;
+                    } else {
+                        currentView.groupBy = {};
+                    }
                 } else if (trimmed.startsWith('property:') && currentView.groupBy) {
                     currentView.groupBy.property = trimmed.replace('property:', '').trim();
                 } else if (trimmed === 'filters:') {

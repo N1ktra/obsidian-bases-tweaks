@@ -50,4 +50,27 @@ views:
         expect(result.isGrouped).toBe(false);
         expect(result.groupProperty).toBeNull();
     });
+
+    it('detects string groupBy and folder grouping', async () => {
+        const folderApp = {
+            vault: {
+                read: async (_file: any) => `
+views:
+  - type: kanban
+    name: Folder Board
+    groupBy: file.folder
+`,
+            },
+        } as any;
+
+        const folderService = new BaseViewService(folderApp);
+        const file = new TFile('Folders.base', 'base');
+        const result = await folderService.detectGrouping(file as any);
+
+        expect(result.isGrouped).toBe(true);
+        expect(result.groupProperty).toBe('file.folder');
+        expect(folderService.isFolderGrouping(result.groupProperty)).toBe(true);
+        expect(folderService.isFolderGrouping('folder')).toBe(true);
+        expect(folderService.isFolderGrouping('Status')).toBe(false);
+    });
 });
