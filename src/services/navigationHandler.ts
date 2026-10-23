@@ -34,8 +34,9 @@ export class NavigationHandler {
     /**
      * Resolves the effective open mode, taking into account:
      * 1. Phone platform (always 'current')
-     * 2. Per-page override stored in settings.perPageOpenModes
-     * 3. Global configured setting (settings.baseOpenMode)
+     * 2. Per-page host override (highest priority)
+     * 3. Underlying Base file override (inherited by embeds)
+     * 4. Global configured setting (settings.baseOpenMode)
      */
     getEffectiveModeForContext(contextEl?: HTMLElement | null): BaseOpenMode {
         if (Platform.isPhone) {
@@ -44,12 +45,20 @@ export class NavigationHandler {
 
         const targetEl = contextEl || this.lastInteractionTarget;
         const hostFile = this.baseResolver.resolveHostFile(targetEl);
+        const baseFile = this.baseResolver.resolveBaseFileSync(targetEl);
         const perPageModes = this.getSettings().perPageOpenModes || {};
 
+        // 1. Specific host note override
         if (hostFile && perPageModes[hostFile.path]) {
             return perPageModes[hostFile.path];
         }
 
+        // 2. Underlying Base file override (inherited)
+        if (baseFile && perPageModes[baseFile.path]) {
+            return perPageModes[baseFile.path];
+        }
+
+        // 3. Fallback to global plugin setting
         return this.getSettings().baseOpenMode;
     }
 

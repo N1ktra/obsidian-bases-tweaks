@@ -4,9 +4,9 @@ export class BaseResolver {
     constructor(private app: App) {}
 
     /**
-     * Resolves the corresponding .base TFile from a DOM element (or active view / embeds).
+     * Resolves the corresponding .base TFile synchronously from leaf, DOM embed attributes, or cache.
      */
-    async resolveBaseFile(contextEl?: HTMLElement | null): Promise<TFile | null> {
+    resolveBaseFileSync(contextEl?: HTMLElement | null): TFile | null {
         // A. Check if within a workspace leaf that directly has a base file
         if (contextEl) {
             const leaves = this.app.workspace.getLeavesOfType('base');
@@ -36,7 +36,10 @@ export class BaseResolver {
             // B. Check DOM embed attributes (e.g. internal-embed, [src*=".base"], .bases-view)
             const embedContainer = contextEl.closest('.internal-embed, [src*=".base"], .bases-view');
             if (embedContainer) {
-                const srcAttr = embedContainer.getAttribute('src') || embedContainer.getAttribute('alt') || embedContainer.getAttribute('data-src');
+                const srcAttr =
+                    embedContainer.getAttribute('src') ||
+                    embedContainer.getAttribute('alt') ||
+                    embedContainer.getAttribute('data-src');
                 if (srcAttr) {
                     const cleanName = srcAttr.replace(/["']/g, '').trim();
                     const resolved = this.app.metadataCache.getFirstLinkpathDest(cleanName, '');
@@ -54,10 +57,36 @@ export class BaseResolver {
                 return activeFile;
             }
 
-            // D. Scan active file markdown for embedded .base files: ![[something.base]]
+            // D. Check embeds in active file cache
+            const fileCache = this.app.metadataCache.getFileCache(activeFile);
+            if (fileCache?.embeds) {
+                for (const embed of fileCache.embeds) {
+                    const dest = this.app.metadataCache.getFirstLinkpathDest(embed.link, activeFile.path);
+                    if (dest && (dest.extension === 'base' || dest.path.endsWith('.base'))) {
+                        return dest;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves the corresponding .base TFile from a DOM element (or active view / embeds).
+     */
+    async resolveBaseFile(contextEl?: HTMLElement | null): Promise<TFile | null> {
+        const syncResolved = this.resolveBaseFileSync(contextEl);
+        if (syncResolved) {
+            return syncResolved;
+        }
+
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile) {
             try {
                 const content = await this.app.vault.read(activeFile);
-                const matches = content.match(/!\[\[(.*?\.(?:base|md))\]\]/g) || content.match(/!\[\[(.*?)\]\]/g);
+                const matches =
+                    content.match(/!\[\[(.*?\.(?:base|md))\]\]/g) || content.match(/!\[\[(.*?)\]\]/g);
 
                 if (matches) {
                     for (const match of matches) {
@@ -69,7 +98,6 @@ export class BaseResolver {
                     }
                 }
 
-                // If file directly defines base filters
                 if (content.includes('filters:')) {
                     return activeFile;
                 }

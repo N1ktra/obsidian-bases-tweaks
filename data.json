@@ -2,7 +2,6 @@
   "baseOpenMode": "split",
   "defaultNoteTitlePrefix": "Neuer Eintrag",
   "perPageOpenModes": {
-    "Meetings/Unbenannt 5.md": "split",
-    "Meetings/PG Meetings.base": "tab"
+    "Meetings/PG Meetings.base": "split"
   }
 }

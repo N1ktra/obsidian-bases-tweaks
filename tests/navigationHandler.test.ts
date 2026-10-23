@@ -106,8 +106,10 @@ describe('navigationHandler', () => {
 
         it('respects per-page open mode override if defined', () => {
             const hostNote = { path: 'Uni/SwSec.md' } as any;
+            const baseFile = { path: 'Uni/Uni-Notizen.base' } as any;
             const mockBaseResolver = {
                 resolveHostFile: () => hostNote,
+                resolveBaseFileSync: () => baseFile,
             } as any;
 
             const mockApp = {
@@ -124,6 +126,55 @@ describe('navigationHandler', () => {
 
             const mode = handler.getEffectiveModeForContext({} as any);
             expect(mode).toBe('tab');
+        });
+
+        it('inherits open mode from underlying base file when host note has no setting', () => {
+            const hostNote = { path: 'Uni/SwSec.md' } as any;
+            const baseFile = { path: 'Uni/Uni-Notizen.base' } as any;
+            const mockBaseResolver = {
+                resolveHostFile: () => hostNote,
+                resolveBaseFileSync: () => baseFile,
+            } as any;
+
+            const mockApp = {
+                workspace: { rootSplit: {} },
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
+                baseOpenMode: 'split',
+                defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {
+                    'Uni/Uni-Notizen.base': 'current',
+                },
+            }));
+
+            const mode = handler.getEffectiveModeForContext({} as any);
+            expect(mode).toBe('current'); // Inherited from base!
+        });
+
+        it('prefers host note override over base file setting', () => {
+            const hostNote = { path: 'Uni/SwSec.md' } as any;
+            const baseFile = { path: 'Uni/Uni-Notizen.base' } as any;
+            const mockBaseResolver = {
+                resolveHostFile: () => hostNote,
+                resolveBaseFileSync: () => baseFile,
+            } as any;
+
+            const mockApp = {
+                workspace: { rootSplit: {} },
+            } as any;
+
+            const handler = new NavigationHandler(mockApp, mockBaseResolver, () => ({
+                baseOpenMode: 'split',
+                defaultNoteTitlePrefix: 'Neuer Eintrag',
+                perPageOpenModes: {
+                    'Uni/SwSec.md': 'tab',
+                    'Uni/Uni-Notizen.base': 'current',
+                },
+            }));
+
+            const mode = handler.getEffectiveModeForContext({} as any);
+            expect(mode).toBe('tab'); // Host note override takes precedence
         });
     });
 });
