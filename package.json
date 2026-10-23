@@ -1,0 +1,30 @@
+{
+  "name": "kanban-bases-plus",
+  "version": "1.0.0",
+  "description": "Auto-inherits filter properties on card creation in Obsidian Bases, adds a new column button when grouped, and customizes base note opening modes for desktop, tablet, and mobile.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "typecheck": "tsc -noEmit -skipLibCheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "bases",
+    "kanban",
+    "filters"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "obsidian": "^1.7.2",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

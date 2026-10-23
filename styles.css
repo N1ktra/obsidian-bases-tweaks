@@ -1,0 +1,51 @@
+/* Bases Kanban Plus styles */
+
+.bases-toolbar-new-column {
+    display: inline-flex;
+    align-items: center;
+}
+
+.bases-toolbar-new-column .text-icon-button {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Modal styling */
+.bases-plus-modal-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bases-plus-modal-desc {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    margin-bottom: 8px;
+}
+
+.bases-plus-modal-desc strong {
+    color: var(--text-normal);
+}
+
+.bases-plus-modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bases-plus-modal-label {
+    font-weight: 500;
+    font-size: var(--font-ui-small);
+    color: var(--text-normal);
+}
+
+.bases-plus-modal-input {
+    width: 100%;
+}
+
+.bases-plus-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
+}

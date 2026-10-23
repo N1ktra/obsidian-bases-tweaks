@@ -1,0 +1,9 @@
+{
+  "id": "bases-tweaks",
+  "name": "Bases Tweaks",
+  "version": "1.0.0",
+  "minAppVersion": "1.5.0",
+  "description": "Auto-inherits filter properties on card creation in Obsidian Bases, adds a new column button when grouped, and customizes base note opening modes for desktop, tablet, and mobile.",
+  "author": "N1ktra",
+  "isDesktopOnly": false
+}
