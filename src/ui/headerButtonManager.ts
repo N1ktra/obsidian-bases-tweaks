@@ -18,7 +18,7 @@ export class HeaderButtonManager {
     ) {}
 
     /**
-     * Scans the DOM for all .bases-toolbar containers and updates the "+ Spalte" button.
+     * Scans the DOM for all .bases-toolbar containers and updates the "Spalte" button.
      */
     async updateAllButtons(): Promise<void> {
         if (this.isUpdating) return;
@@ -116,7 +116,7 @@ export class HeaderButtonManager {
 
         const labelSpan = document.createElement('span');
         labelSpan.className = 'text-button-label';
-        labelSpan.textContent = '+ Spalte';
+        labelSpan.textContent = 'Spalte';
         buttonEl.appendChild(labelSpan);
 
         itemEl.appendChild(buttonEl);

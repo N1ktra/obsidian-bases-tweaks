@@ -19,7 +19,7 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
    - **Seiten- vs. Base-Überschreibung**: Öffnungsmodus kann global, für die Base selbst oder seitenspezifisch (für Embeds) festgelegt werden.
    - **Mobile-Regel**: Auf Smartphones (`Platform.isPhone`) wird **immer** im gleichen Tab geöffnet, um das Layout auf kleinen Bildschirmen optimal zu nutzen. Auf Desktop und Tablets greift die konfigurierte Einstellung.
 
-3. **Dynamischer "+ Spalte"-Button im Header**:
+3. **Dynamischer "Spalte"-Button im Header**:
    - Erscheint automatisch im Toolbar der Base, **wenn die aktive Ansicht nach einer Eigenschaft gruppiert ist** (z. B. `Status`, `Dringlichkeit`, `Kategorie` oder Ordner).
    - Öffnet einen Dialog zur Eingabe des neuen Spaltenwerts und optionalen Notiztitels.
    - Erstellt das Dokument, weist den Spaltenwert zu und vererbt alle aktiven Base-Filter.
@@ -42,7 +42,7 @@ bases-tweaks/
 │   │   ├── navigationHandler.ts    # Öffnungsmodus-Steuerung mit Phone-Erkennung & Split-Wiederverwendung
 │   │   └── cardCreator.ts          # Atomares Frontmatter-Writing & Dateierstellung
 │   └── ui/
-│       ├── headerButtonManager.ts  # Dynamische Injektion des "+ Spalte"-Buttons in die Toolbar
+│       ├── headerButtonManager.ts  # Dynamische Injektion des "Spalte"-Buttons in die Toolbar
 │       ├── openModeButtonManager.ts# Injektion des Öffnungsmodus-Dropdowns
 │       └── newColumnModal.ts       # Dialog zur Eingabe von Spaltenwert & Titel
 └── tests/
