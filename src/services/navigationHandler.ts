@@ -17,6 +17,71 @@ export function resolveEffectiveOpenMode(
     return configuredMode;
 }
 
+/**
+ * Checks if two leaves belong to the same WorkspaceTabs group.
+ */
+export function areLeavesInSameTabsGroup(leafA: WorkspaceLeaf, leafB: WorkspaceLeaf): boolean {
+    if (leafA === leafB) return true;
+
+    // 1. Check parent reference (WorkspaceTabs in Obsidian)
+    const parentA = (leafA as any).parent;
+    const parentB = (leafB as any).parent;
+    if (parentA && parentB) {
+        return parentA === parentB;
+    }
+
+    // 2. Check DOM container (.workspace-tabs)
+    const elA = (leafA as any).containerEl || leafA.view?.containerEl;
+    const elB = (leafB as any).containerEl || leafB.view?.containerEl;
+    if (elA && elB && typeof elA.closest === 'function' && typeof elB.closest === 'function') {
+        const tabsA = elA.closest('.workspace-tabs');
+        const tabsB = elB.closest('.workspace-tabs');
+        if (tabsA && tabsB) {
+            return tabsA === tabsB;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Checks if a leaf is the currently active/visible tab within its parent WorkspaceTabs.
+ */
+export function isLeafActiveInTabs(leaf: WorkspaceLeaf): boolean {
+    const parent = (leaf as any).parent;
+    if (parent) {
+        if (Array.isArray(parent.children)) {
+            // Only child in its tab group is always active
+            if (parent.children.length === 1 && parent.children[0] === leaf) {
+                return true;
+            }
+            // Check parent.currentTab index
+            if (typeof parent.currentTab === 'number') {
+                return parent.children[parent.currentTab] === leaf;
+            }
+        }
+    }
+
+    // Check tabHeaderEl class
+    const tabHeaderEl = (leaf as any).tabHeaderEl as HTMLElement | undefined;
+    if (tabHeaderEl?.classList) {
+        if (tabHeaderEl.classList.contains('is-active')) {
+            return true;
+        }
+    }
+
+    // Check DOM display style on leaf container
+    const container = ((leaf as any).containerEl || leaf.view?.containerEl) as HTMLElement | undefined;
+    if (container?.style?.display === 'none') {
+        return false;
+    }
+    if (container?.classList?.contains('is-hidden')) {
+        return false;
+    }
+
+    return true;
+}
+
 export class NavigationHandler {
     private isInteractingWithBase = false;
     private interactionResetTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -112,7 +177,7 @@ export class NavigationHandler {
             if (self.isInteractingWithBase && newLeaf !== 'window') {
                 const effectiveMode = self.getEffectiveModeForContext(self.lastInteractionTarget);
                 if (effectiveMode === 'split') {
-                    return self.getOrCreateSplitLeaf();
+                    return self.getOrCreateSplitLeaf(self.lastInteractionTarget);
                 } else if (effectiveMode === 'tab') {
                     return self.originalGetLeaf!.call(this, 'tab');
                 } else {
@@ -189,20 +254,62 @@ export class NavigationHandler {
     }
 
     /**
-     * Finds an existing markdown/editor leaf in the main workspace that is NOT a base view.
+     * Finds an existing markdown/editor leaf in an active split pane that is NOT
+     * in the same tab group as the base leaf and NOT a background tab.
      */
-    findExistingSplitLeaf(): WorkspaceLeaf | null {
-        // 1. If we previously targeted a split leaf and it is still valid and connected
+    findExistingSplitLeaf(contextEl?: HTMLElement | null): WorkspaceLeaf | null {
+        const baseLeaf = this.findBaseLeafForContext(contextEl);
+
+        // Check how many tab groups exist in the main workspace
+        const tabGroups = new Set<any>();
+        this.app.workspace.iterateAllLeaves((leaf) => {
+            if (!this.isMainWorkspaceLeaf(leaf)) return;
+            const parent = (leaf as any).parent;
+            if (parent) {
+                tabGroups.add(parent);
+            } else {
+                const tabsEl = (leaf.view?.containerEl || (leaf as any).containerEl)?.closest?.('.workspace-tabs');
+                if (tabsEl) {
+                    tabGroups.add(tabsEl);
+                }
+            }
+        });
+
+        // If at least one tab group was detected and only 1 exists in the main workspace,
+        // no split pane is open at all (all tabs are in the same tab group).
+        if (tabGroups.size === 1) {
+            return null;
+        }
+
+        // 1. If we previously targeted a split leaf, check if it is still a valid active split
         if (
             this.lastTargetSplitLeaf &&
             this.lastTargetSplitLeaf.view?.containerEl?.isConnected &&
             this.isMainWorkspaceLeaf(this.lastTargetSplitLeaf) &&
-            !this.isBaseLeaf(this.lastTargetSplitLeaf)
+            !this.isBaseLeaf(this.lastTargetSplitLeaf) &&
+            (!baseLeaf || !areLeavesInSameTabsGroup(baseLeaf, this.lastTargetSplitLeaf))
         ) {
-            return this.lastTargetSplitLeaf;
+            // If the last target leaf itself is active in its tab group, reuse it
+            if (isLeafActiveInTabs(this.lastTargetSplitLeaf)) {
+                return this.lastTargetSplitLeaf;
+            }
+
+            // If another tab became active in that same split tab group, use that active tab
+            const targetParent = (this.lastTargetSplitLeaf as any).parent;
+            if (targetParent && Array.isArray(targetParent.children) && typeof targetParent.currentTab === 'number') {
+                const activeInSameGroup = targetParent.children[targetParent.currentTab];
+                if (
+                    activeInSameGroup &&
+                    !this.isBaseLeaf(activeInSameGroup) &&
+                    activeInSameGroup.view?.containerEl?.isConnected
+                ) {
+                    this.lastTargetSplitLeaf = activeInSameGroup;
+                    return activeInSameGroup;
+                }
+            }
         }
 
-        // 2. Scan all leaves in the main workspace for an existing editor leaf
+        // 2. Scan all leaves in the main workspace for an active editor leaf in a different tab group
         let candidate: WorkspaceLeaf | null = null;
         this.app.workspace.iterateAllLeaves((leaf) => {
             if (candidate) return;
@@ -210,8 +317,18 @@ export class NavigationHandler {
             if (!this.isMainWorkspaceLeaf(leaf)) return;
             if (this.isBaseLeaf(leaf)) return;
 
+            // Must NOT be in the same tab group as the base leaf
+            if (baseLeaf && areLeavesInSameTabsGroup(baseLeaf, leaf)) {
+                return;
+            }
+
+            // Must be the active/visible tab in its tab group (not a background tab)
+            if (!isLeafActiveInTabs(leaf)) {
+                return;
+            }
+
             const viewType = leaf.view.getViewType?.();
-            if (viewType === 'markdown' || viewType === 'empty') {
+            if (viewType === 'markdown' || viewType === 'empty' || viewType === 'canvas') {
                 candidate = leaf;
             }
         });
@@ -421,10 +538,11 @@ export class NavigationHandler {
     /**
      * Gets an existing split leaf or creates a new one via originalGetLeaf('split').
      */
-    getOrCreateSplitLeaf(): WorkspaceLeaf {
-        const existing = this.findExistingSplitLeaf();
+    getOrCreateSplitLeaf(contextEl?: HTMLElement | null): WorkspaceLeaf {
+        const targetContext = contextEl || this.lastInteractionTarget;
+        const existing = this.findExistingSplitLeaf(targetContext);
         if (existing) {
-            this.restoreSplitSizeForContext(this.lastInteractionTarget, existing);
+            this.restoreSplitSizeForContext(targetContext, existing);
             return existing;
         }
 
@@ -433,7 +551,7 @@ export class NavigationHandler {
             : (this.app.workspace.getLeaf as any)('split');
 
         this.lastTargetSplitLeaf = newLeaf;
-        this.restoreSplitSizeForContext(this.lastInteractionTarget, newLeaf);
+        this.restoreSplitSizeForContext(targetContext, newLeaf);
         return newLeaf;
     }
 
@@ -449,7 +567,7 @@ export class NavigationHandler {
 
         let leaf: WorkspaceLeaf;
         if (effectiveMode === 'split') {
-            leaf = this.getOrCreateSplitLeaf();
+            leaf = this.getOrCreateSplitLeaf(contextEl || this.lastInteractionTarget);
             this.restoreSplitSizeForContext(contextEl || this.lastInteractionTarget, leaf);
         } else if (effectiveMode === 'tab') {
             // @ts-ignore Obsidian supports getLeaf('tab')

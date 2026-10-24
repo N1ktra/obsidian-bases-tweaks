@@ -13,7 +13,7 @@ Ein modulares, TypeScript-basiertes Obsidian-Plugin zur automatischen Property-V
 
 2. **Flexibler Öffnungsmodus (Desktop, Tablet & Smartphone)**:
    - Einstellung per Dropdown direkt in der Base-Toolbar oder in den Plugin-Optionen:
-     - **Split-Modus**: Öffnet neu erstellte Notizen oder aus der Base angeklickte Seiten geteilt neben der Base (existierender Split wird intelligent wiederverwendet).
+     - **Split-Modus**: Öffnet neu erstellte Notizen oder aus der Base angeklickte Seiten geteilt neben der Base (ein existierender Split wird intelligent wiederverwendet; Tabs im Hintergrund in derselben Tab-Gruppe werden niemals überschrieben).
      - **Neuer Tab**: Öffnet Seiten in einem neuen Tab.
      - **Selber Tab**: Verwendet den aktuellen Tab.
    - **Seiten- vs. Base-Überschreibung**: Öffnungsmodus kann global, für die Base selbst oder seitenspezifisch (für Embeds) festgelegt werden.

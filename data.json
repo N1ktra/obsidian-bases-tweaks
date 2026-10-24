@@ -3,5 +3,9 @@
   "defaultNoteTitlePrefix": "Neuer Eintrag",
   "perPageOpenModes": {
     "Meetings/PG Meetings.base": "split"
-  }
+  },
+  "splitSizeScope": "global",
+  "globalSplitSize": 50,
+  "perBaseSplitSizes": {},
+  "shortenFolderGroupNames": true
 }

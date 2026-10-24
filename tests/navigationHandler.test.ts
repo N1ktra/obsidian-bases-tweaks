@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { NavigationHandler, resolveEffectiveOpenMode } from '../src/services/navigationHandler';
+import {
+    NavigationHandler,
+    resolveEffectiveOpenMode,
+    areLeavesInSameTabsGroup,
+    isLeafActiveInTabs,
+} from '../src/services/navigationHandler';
 import { BasesTweaksSettings } from '../src/types';
 import { WorkspaceLeaf } from './mocks/obsidian';
 
@@ -117,6 +122,153 @@ describe('navigationHandler', () => {
             const result2 = handler.getOrCreateSplitLeaf();
             expect(result2).toBe(existingSplitLeaf);
             expect(mockApp.workspace.getLeaf).not.toHaveBeenCalled();
+        });
+
+        it('does NOT overwrite a background tab in the same tab group, but creates a new split', () => {
+            const tabGroup1 = {
+                children: [] as any[],
+                currentTab: 0,
+            };
+
+            const baseLeaf = new WorkspaceLeaf();
+            baseLeaf.view.getViewType = () => 'base';
+            baseLeaf.parent = tabGroup1;
+
+            const backgroundNoteLeaf = new WorkspaceLeaf();
+            backgroundNoteLeaf.view.getViewType = () => 'markdown';
+            backgroundNoteLeaf.parent = tabGroup1;
+
+            tabGroup1.children = [baseLeaf, backgroundNoteLeaf];
+            // baseLeaf is active (currentTab = 0), backgroundNoteLeaf is in background
+
+            const newlyCreatedSplitLeaf = new WorkspaceLeaf();
+            newlyCreatedSplitLeaf.view.getViewType = () => 'markdown';
+            const tabGroup2 = {
+                children: [newlyCreatedSplitLeaf],
+                currentTab: 0,
+            };
+            newlyCreatedSplitLeaf.parent = tabGroup2;
+
+            const mockApp = {
+                workspace: {
+                    rootSplit: {},
+                    openLinkText: vi.fn(),
+                    getLeaf: vi.fn((type: string) => {
+                        if (type === 'split') return newlyCreatedSplitLeaf;
+                        return new WorkspaceLeaf();
+                    }),
+                    iterateAllLeaves: (cb: (leaf: any) => void) => {
+                        cb(baseLeaf);
+                        cb(backgroundNoteLeaf);
+                    },
+                    getLeavesOfType: () => [baseLeaf],
+                },
+            } as any;
+
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+                resolveBaseFileSync: () => null,
+            } as any;
+
+            const handler = new NavigationHandler(
+                mockApp,
+                mockBaseResolver,
+                () => createMockSettings({ baseOpenMode: 'split' })
+            );
+
+            // Trigger base interaction with baseLeaf's container
+            handler.triggerBaseInteraction(baseLeaf.view.containerEl);
+
+            const result = handler.getOrCreateSplitLeaf(baseLeaf.view.containerEl);
+
+            // It MUST create a new split instead of reusing the background tab in the same tab group!
+            expect(mockApp.workspace.getLeaf).toHaveBeenCalledWith('split');
+            expect(result).toBe(newlyCreatedSplitLeaf);
+            expect(result).not.toBe(backgroundNoteLeaf);
+        });
+
+        it('reuses the active tab in an existing split pane, leaving background tabs in that split untouched', () => {
+            const tabGroup1 = {
+                children: [] as any[],
+                currentTab: 0,
+            };
+
+            const baseLeaf = new WorkspaceLeaf();
+            baseLeaf.view.getViewType = () => 'base';
+            baseLeaf.parent = tabGroup1;
+            tabGroup1.children = [baseLeaf];
+
+            const tabGroup2 = {
+                children: [] as any[],
+                currentTab: 1, // active tab is index 1
+            };
+
+            const splitBackgroundNote = new WorkspaceLeaf();
+            splitBackgroundNote.view.getViewType = () => 'markdown';
+            splitBackgroundNote.parent = tabGroup2;
+
+            const splitActiveNote = new WorkspaceLeaf();
+            splitActiveNote.view.getViewType = () => 'markdown';
+            splitActiveNote.parent = tabGroup2;
+
+            tabGroup2.children = [splitBackgroundNote, splitActiveNote];
+
+            const mockApp = {
+                workspace: {
+                    rootSplit: {},
+                    openLinkText: vi.fn(),
+                    getLeaf: vi.fn(),
+                    iterateAllLeaves: (cb: (leaf: any) => void) => {
+                        cb(baseLeaf);
+                        cb(splitBackgroundNote);
+                        cb(splitActiveNote);
+                    },
+                    getLeavesOfType: () => [baseLeaf],
+                },
+            } as any;
+
+            const mockBaseResolver = {
+                resolveHostFile: () => null,
+                resolveBaseFileSync: () => null,
+            } as any;
+
+            const handler = new NavigationHandler(
+                mockApp,
+                mockBaseResolver,
+                () => createMockSettings({ baseOpenMode: 'split' })
+            );
+
+            handler.triggerBaseInteraction(baseLeaf.view.containerEl);
+            const result = handler.getOrCreateSplitLeaf(baseLeaf.view.containerEl);
+
+            // It should reuse splitActiveNote (the active tab in the split), NOT create a new split or use background tab
+            expect(mockApp.workspace.getLeaf).not.toHaveBeenCalled();
+            expect(result).toBe(splitActiveNote);
+            expect(result).not.toBe(splitBackgroundNote);
+        });
+
+        it('helper functions areLeavesInSameTabsGroup and isLeafActiveInTabs work accurately', () => {
+            const tabs1 = { children: [] as any[], currentTab: 0 };
+            const tabs2 = { children: [] as any[], currentTab: 0 };
+
+            const leaf1 = new WorkspaceLeaf();
+            leaf1.parent = tabs1;
+
+            const leaf2 = new WorkspaceLeaf();
+            leaf2.parent = tabs1;
+
+            const leaf3 = new WorkspaceLeaf();
+            leaf3.parent = tabs2;
+
+            tabs1.children = [leaf1, leaf2];
+            tabs2.children = [leaf3];
+
+            expect(areLeavesInSameTabsGroup(leaf1 as any, leaf2 as any)).toBe(true);
+            expect(areLeavesInSameTabsGroup(leaf1 as any, leaf3 as any)).toBe(false);
+
+            expect(isLeafActiveInTabs(leaf1 as any)).toBe(true);
+            expect(isLeafActiveInTabs(leaf2 as any)).toBe(false);
+            expect(isLeafActiveInTabs(leaf3 as any)).toBe(true);
         });
 
         it('respects per-page open mode override if defined', () => {
